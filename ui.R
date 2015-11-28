@@ -93,6 +93,16 @@ shinyUI(
                                 ),
                                 plotlyOutput('scatterPlot'),
                                 plotlyOutput('ggplot')
+                            ),
+                            tabPanel("Box Plot",
+                                flowLayout(
+                                    selectInput("box_xcol", "Value", c()),
+                                    selectInput("box_facet", "Facet", c())
+                                ),
+                                plotlyOutput("boxPlot")
+                            ),
+                            tabPanel("Diagnoza Rules",
+                                dataTableOutput("rulesTable")         
                             )
                         ) 
                     )    

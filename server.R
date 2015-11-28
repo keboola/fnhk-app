@@ -88,7 +88,7 @@ shinyServer(function(input, output, session) {
         keboola()$sourceData
     })
     
-    # we'll run data through some known type setting functions 
+    # we'll run data through some known type setting functions they are at the top of the file
     tableData <- reactive({
         sd <- sourceData()
         if (is.null(sd)) {
@@ -108,7 +108,7 @@ shinyServer(function(input, output, session) {
         }
     })
     
-    # We're going to also observe for when the table gets changed
+    # We'll observe for a change of tables to update our inputs
     observe({
         td <- tableData()
         if (input$table != "" && !(is.null(td))) {
@@ -126,6 +126,10 @@ shinyServer(function(input, output, session) {
             updateSelectInput(session,"ycol", choices=names(td))
             updateSelectInput(session,"groupCol", choices=c("",names(td[sapply(td, is.factor)])))
             updateSelectInput(session,"facetCol", choices=c("",names(td[sapply(td, is.factor)])))
+            
+            # update box plot inputs
+            updateSelectInput(session,"box_xcol", choices=names(td[sapply(td, is.numeric)]))
+            updateSelectInput(session,"box_facet", choices=names(td[sapply(td, is.factor)]))
         }
     })
     
@@ -140,8 +144,8 @@ shinyServer(function(input, output, session) {
             if (!is.null(sd) && length(input$rangeCols) > 0) {
                 # loop over our chosen range inputs
                 for (i in 1:length(input$rangeCols)) {
-                    rangeElem <- input$rangeCols[i]
                     
+                    rangeElem <- input$rangeCols[i]
                     # filter our dataset
                     sd <- sd[
                                 which(
@@ -156,15 +160,15 @@ shinyServer(function(input, output, session) {
                 for (i in 1:length(input$dateCol)) {
                     dateElem <- input$dateCol[i]
                     timeInterval <- new_interval(input[[dateElem]][1],input[[dateElem]][2])
-                    outdat <- outdat[which(
-                        outdat[,dateElem] %within% timeInterval),]    
+                    sd <- sd[which(
+                        sd[,dateElem] %within% timeInterval),]    
                 }
             }
             if (length(input$categoryVar) > 0) {
                 for (i in 1:length(input$categoryVar)) {
                     catlhs <- input$categoryVar[i]
                     if (length(input[[catlhs]]) > 0) {
-                        outdat <- outdat[which(outdat[,catlhs] %in% input[[catlhs]]),]    
+                        sd <- sd[which(sd[,catlhs] %in% input[[catlhs]]),]    
                     }
                 }
             }
@@ -330,12 +334,35 @@ shinyServer(function(input, output, session) {
     
     # This is a plotly box plot
     output$boxPlot <- renderPlotly({
-        
-        plot_ly(td, x = percollege, color = state, type = "box")
+        td <- filteredData()
+        pd <- data.table(
+            value = td[[input$box_xcol]],
+            facet = td[[input$box_facet]]
+        )        
+        plot_ly(pd, x = value, color = facet, type = "box")
     })
     
     # Fancy 3D surface plot
     output$volcano <- renderPlotly({
         plot_ly(z = volcano, type = "surface")
+    })
+    
+    basketData <- reactive({
+        diagnozy <- klib$loadTable("diagnozy","dim_pripady_diagnozy")    
+        print(head(diagnozy))
+        print(names(diagnozy))
+        trans <- as(split(diagnozy[,"kod_diagnoza"],diagnozy[,"identifikace_pripadu"]), "transactions")
+        parameters <- list(
+            support=0.01,
+            confidence=0.2,
+            minlen=2
+        )
+        rules <- apriori(trans, parameter=parameters)
+        inspect(rules)
+        as.data.frame(rules)
+    })
+    
+    output$rulesTable <- renderDataTable({
+        basketData()
     })
 })
