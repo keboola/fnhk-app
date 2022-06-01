@@ -17,3 +17,6 @@ runKeboolaApp()
 ## Deploy your app via KBC
 
 Once you have it how you like, you can deploy it following the instructions here: [Configuration.md](Configuration.md)
+## License
+
+MIT licensed, see [LICENSE](./LICENSE) file.
